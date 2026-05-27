@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 對勞動政策之影響</title>
+  <style>
+    :root {
+      --bg: #0d0d12;
+      --surface: #16161f;
+      --surface2: #1e1e2a;
+      --border: #2a2a3a;
+      --primary: #6c63f5;
+      --primary-light: #9d96ff;
+      --accent: #f05a5a;
+      --green: #3ecf8e;
+      --yellow: #f5c842;
+      --cyan: #5bc8f5;
+      --text: #eaeaf5;
+      --muted: #7a7a9a;
+      --radius: 14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: "Noto Sans TC", "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+      background: rgba(13,13,18,.9);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+    .topbar-title {
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .topbar-title strong { color: var(--text); }
+    .slide-counter {
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .slide-counter span { color: var(--primary-light); font-weight: 700; }
+
+    /* ── Main stage ── */
+    .stage {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Slides ── */
+    .slides-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 60px;
+      opacity: 0;
+      transform: translateX(40px);
+      transition: opacity .35s ease, transform .35s ease;
+      pointer-events: none;
+      overflow-y: auto;
+    }
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: all;
+    }
+    .slide.exit {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+    .slide-inner {
+      width: 100%;
+      max-width: 820px;
+      margin: auto;
+    }
+
+    /* ── Slide types ── */
+
+    /* Cover */
+    .slide-cover {
+      background:
+        radial-gradient(ellipse 70% 60% at 20% 50%, rgba(108,99,245,.22) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 50% at 80% 60%, rgba(240,90,90,.16) 0%, transparent 55%),
+        var(--bg);
+      text-align: center;
+    }
+    .slide-cover .tag {
+      display: inline-block;
+      border: 1px solid rgba(108,99,245,.4);
+      background: rgba(108,99,245,.1);
+      color: var(--primary-light);
+      font-size: 0.72rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 4px 16px;
+      border-radius: 99px;
+      margin-bottom: 28px;
+    }
+    .slide-cover h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #fff 20%, var(--primary-light) 60%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .slide-cover .author {
+      font-size: 1.05rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .slide-cover .dept {
+      font-size: 0.88rem;
+      color: #555577;
+      margin-top: 4px;
+    }
+    .slide-cover .hero-stats {
+      display: flex;
+      gap: 36px;
+      justify-content: center;
+      margin-top: 44px;
+      flex-wrap: wrap;
+    }
+    .hero-stat .num {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary-light), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+    /* Section divider */
+    .slide-section {
+      background:
+        radial-gradient(ellipse 60% 60% at 50% 50%, rgba(108,99,245,.15) 0%, transparent 60%),
+        var(--surface);
+      text-align: center;
+    }
+    .slide-section .sec-num {
+      font-size: 0.72rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+    .slide-section h2 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--primary-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Content slide */
+    .slide-content {}
+    .slide-content .slide-title {
+      font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .slide-content .slide-title .title-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: rgba(108,99,245,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    /* Body text */
+    .body-text {
+      font-size: 0.97rem;
+      color: #c0c0d8;
+      line-height: 1.8;
+      margin-bottom: 14px;
+    }
+
+    /* Bullet list */
+    .bullet-list {
+      list-style: none;
+      margin: 0 0 16px;
+    }
+    .bullet-list li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      font-size: 0.95rem;
+      color: #c0c0d8;
+      line-height: 1.7;
+    }
+    .bullet-list li:last-child { border: none; }
+    .bullet-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+      margin-top: 9px;
+    }
+
+    /* Sub bullets */
+    .sub-list {
+      list-style: none;
+      margin: 6px 0 0 18px;
+    }
+    .sub-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 4px 0;
+      line-height: 1.6;
+    }
+    .sub-dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      margin-top: 9px;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: rgba(108,99,245,.08);
+      border: 1px solid rgba(108,99,245,.25);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin: 16px 0;
+      font-size: 0.93rem;
+      color: var(--primary-light);
+      line-height: 1.7;
+    }
+    .highlight-box.warn {
+      background: rgba(240,90,90,.07);
+      border-color: rgba(240,90,90,.25);
+      color: #f08080;
+    }
+    .highlight-box.green {
+      background: rgba(62,207,142,.07);
+      border-color: rgba(62,207,142,.25);
+      color: var(--green);
+    }
+    .highlight-box.yellow {
+      background: rgba(245,200,66,.07);
+      border-color: rgba(245,200,66,.25);
+      color: var(--yellow);
+    }
+
+    /* Stat cards row */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-card .num {
+      font-size: 1.7rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary-light), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+    .stat-card .lbl { font-size: 0.78rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+    /* Two-column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .col-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .col-card h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .col-card ul { list-style: none; }
+    .col-card ul li {
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 0.85rem; color: var(--muted); padding: 5px 0;
+      line-height: 1.5;
+    }
+    .col-card.pro { border-top: 3px solid var(--green); }
+    .col-card.pro h4 { color: var(--green); }
+    .col-card.con { border-top: 3px solid var(--accent); }
+    .col-card.con h4 { color: var(--accent); }
+
+    /* Citation */
+    .cite {
+      font-size: 0.78rem;
+      color: #444466;
+      font-style: italic;
+      margin-left: 4px;
+    }
+
+    /* References slide */
+    .ref-list {
+      list-style: none;
+      margin-top: 8px;
+    }
+    .ref-list li {
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.7;
+    }
+    .ref-list li:last-child { border: none; }
+    .ref-list a { color: var(--cyan); text-decoration: none; word-break: break-all; }
+
+    /* Tag pill */
+    .tag-pill {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+    .tag-purple { background: rgba(108,99,245,.15); color: var(--primary-light); }
+    .tag-red    { background: rgba(240,90,90,.15);  color: #f09090; }
+    .tag-green  { background: rgba(62,207,142,.15); color: var(--green); }
+    .tag-yellow { background: rgba(245,200,66,.15); color: var(--yellow); }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 12px 24px;
+      background: rgba(13,13,18,.95);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .nav-btn:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .nav-btn:disabled:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+
+    /* Progress bar */
+    .progress-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width .35s ease;
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* Dot nav */
+    .dot-nav {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 400px;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+    .dot.active { background: var(--primary); width: 18px; border-radius: 3px; }
+    .dot:hover { background: var(--primary-light); }
+
+    /* Keyboard hint */
+    .kbd-hint {
+      font-size: 0.72rem;
+      color: #33334a;
+      text-align: center;
+      padding-bottom: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .slide { padding: 24px 20px; }
+      .two-col { grid-template-columns: 1fr; }
+      .slide-cover h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-title"><strong>AI 對勞動政策之影響</strong> — 鍾明倫助理教授</div>
+  <div class="slide-counter">投影片 <span id="cur">1</span> / <span id="tot">27</span></div>
+</div>
+
+<!-- Stage -->
+<div class="stage">
+  <div class="slides-wrapper" id="slides">
+
+    <!-- 1. Cover -->
+    <div class="slide slide-cover active" data-slide="1">
+      <div class="slide-inner">
+        <div class="tag">LABOR POLICY &amp; AI</div>
+        <h1>AI 對勞動政策<br>之影響</h1>
+        <div class="author">鍾明倫 助理教授</div>
+        <div class="dept">公民教育與活動領導學系</div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="num">88%</div><div class="lbl">企業已採用 AI<br>（WEF, 2025）</div></div>
+          <div class="hero-stat"><div class="num">17–21%</div><div class="lbl">心智勞動職缺<br>已下降（Demirci et al., 2025）</div></div>
+          <div class="hero-stat"><div class="num">3大</div><div class="lbl">政策層次<br>風險・國家・全球</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Section: AI 的風險 -->
+    <div class="slide slide-section" data-slide="2">
+      <div class="slide-inner">
+        <div class="sec-num">PART 01</div>
+        <h2>AI 的風險</h2>
+      </div>
+    </div>
+
+    <!-- 3. AI 的獨特之處 -->
+    <div class="slide slide-content" data-slide="3">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🤖</div>AI 本身的獨特之處</div>
+        <p class="body-text">相較於過去數十年間的數位化（digitalization），AI 有什麼特點？為什麼需要被特別重視？</p>
+        <div class="highlight-box">
+          AI 為一場「真正的經濟革命（genuine economic revolution）」，足以從根本上改變社會。<span class="cite">（Buccella, 2022）</span>
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>我們在學術、哲學層面上對 AI 的理解，皆難以跟上其發展速度。</div></li>
+          <li><div class="bullet-dot"></div><div>AI 的能力已超越單純的自動化，能執行以往只有人類才能完成的複雜認知任務。</div></li>
+          <li><div class="bullet-dot"></div><div>這使 AI 不只是效率工具，而是可能重塑整個勞動市場結構的根本性技術。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 4. AI 與勞動市場轉型 -->
+    <div class="slide slide-content" data-slide="4">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">📊</div>AI 與勞動市場轉型</div>
+        <div class="stat-row">
+          <div class="stat-card"><div class="num">88%</div><div class="lbl">全球企業至少在一項<br>組織功能中使用 AI<br><em style="font-size:.7rem;">WEF, 2025</em></div></div>
+          <div class="stat-card"><div class="num">2025</div><div class="lbl">AI 全面滲透<br>企業組織功能</div></div>
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>AI 技術正日益滲透經濟體系，並應用於招聘、績效評估與勞動管理等領域。</div></li>
+          <li><div class="bullet-dot"></div><div>從企業角度而言，AI 能夠加快、提升工作流程，並維持他們在全球市場中的競爭優勢。</div></li>
+          <li><div class="bullet-dot"></div><div>2025 年，全球有 88% 的企業至少在一項組織功能（at least one function）中使用 AI。<span class="cite">（World Economic Forum, 2025）</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 5. 勞動風險：職位空缺 -->
+    <div class="slide slide-content" data-slide="5">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">⚠️</div>AI 所帶來的勞動風險：對職位空缺的風險</div>
+        <div class="highlight-box warn">
+          AI 透過自動化與取代效應威脅工作數量
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>與過去的數位化相比，AI（尤其生成式 AI）能執行複雜的「認知任務」，以及過去主要與人類認知相關的任務。</div></li>
+          <li><div class="bullet-dot"></div><div>AI 更傾向於取代人類勞工，而非僅僅增強人類勞動能力，或透過人機協作來提升生產力。</div></li>
+          <li><div class="bullet-dot"></div><div>這意味著，AI 帶來的是「減少工作機會」的壓力，而非純粹的效率提升。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 6. 勞動風險：勞動力 -->
+    <div class="slide slide-content" data-slide="6">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">👥</div>AI 所帶來的勞動風險：對勞動力的風險</div>
+        <ul class="bullet-list">
+          <li>
+            <div class="bullet-dot"></div>
+            <div>
+              <strong style="color:#fff;">監控與自動化決策</strong>
+              <div class="sub-list"><li><div class="sub-dot"></div><div>自動化 AI 決策系統可能減低勞工自主性，並削弱集體組織能力。<span class="cite">（OECD, 2023）</span></div></li></div>
+            </div>
+          </li>
+          <li>
+            <div class="bullet-dot"></div>
+            <div>
+              <strong style="color:#fff;">AI 招聘系統的偏誤</strong>
+              <div class="sub-list"><li><div class="sub-dot"></div><div>建立於帶有歷史偏誤的資料之上，可能延續既有的不平等。<span class="cite">（Strietska-Ilina &amp; Chun, 2021）</span></div></li></div>
+            </div>
+          </li>
+          <li>
+            <div class="bullet-dot"></div>
+            <div>
+              <strong style="color:#fff;">數位素養落差</strong>
+              <div class="sub-list"><li><div class="sub-dot"></div><div>缺乏高階數位素養或基礎技能的勞工，可能愈來愈被排除在勞動市場之外。</div></li></div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 7. Section: AI 與勞動市場 -->
+    <div class="slide slide-section" data-slide="7">
+      <div class="slide-inner">
+        <div class="sec-num">PART 02</div>
+        <h2>AI 與勞動市場</h2>
+      </div>
+    </div>
+
+    <!-- 8. 勞動力的區分（1） -->
+    <div class="slide slide-content" data-slide="8">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🧠</div>勞動力的區分（一）</div>
+        <p class="body-text">政策制定者需要認清「體力勞動」與「心智勞動」的區別。<span class="cite">（Harel, 2026）</span></p>
+        <div class="two-col">
+          <div class="col-card pro">
+            <h4>🏋️ 體力勞動</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>依賴肌肉、動作與物理操作</div></li>
+              <li><div class="sub-dot"></div><div>AI 機器人需大量資本投入</div></li>
+              <li><div class="sub-dot"></div><div>工業革命時期主要被取代的類型</div></li>
+            </ul>
+          </div>
+          <div class="col-card con">
+            <h4>💡 心智勞動</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>透過內部認知過程進行：思考、推論、記憶、語言</div></li>
+              <li><div class="sub-dot"></div><div>AI 執行成本相對低廉</div></li>
+              <li><div class="sub-dot"></div><div>當代 AI 革命的主要威脅對象</div></li>
+            </ul>
+          </div>
+        </div>
+        <div class="highlight-box">
+          過去工業革命主要取代的是體力勞動；當代 AI 革命則愈來愈威脅心智勞動。
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. 勞動力的區分（2） -->
+    <div class="slide slide-content" data-slide="9">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">📉</div>勞動力的區分（二）：衝擊數據</div>
+        <div class="stat-row">
+          <div class="stat-card"><div class="num">17–21%</div><div class="lbl">心智勞動職缺下降幅度<br><em style="font-size:.7rem;">Demirci et al., 2025</em></div></div>
+          <div class="stat-card"><div class="num">首先</div><div class="lbl">AI 優先衝擊<br>心智勞動者</div></div>
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>能夠執行心智勞動的 AI 相對成本較低；相較之下，體力勞動的 AI 機器與機器人則需要大量資本投資。</div></li>
+          <li><div class="bullet-dot"></div><div>由於成本結構不同，AI 很可能會首先影響心智勞動者。</div></li>
+          <li><div class="bullet-dot"></div><div>AI 已導致不同類型心智勞動的職缺數量下降約 17% 至 21%。<span class="cite">（Demirci et al., 2025）</span></div></li>
+          <li><div class="bullet-dot"></div><div>在可見的未來，愈來愈多心智勞動者可能面臨失業或被迫轉職，並波及各行各業。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 10. 對社會的衝擊（1） -->
+    <div class="slide slide-content" data-slide="10">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🌐</div>對社會的衝擊（一）：無效勞動力</div>
+        <div class="highlight-box warn">
+          在 AI 取代心智勞動（或使其薪資降低）的情況下，心智勞動力可能變成「無效勞動力（Ineffective Labor Power）」。
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div><strong style="color:#fff;">無效勞動力定義：</strong>在特定經濟條件與勞動市場下，其技能已無法被市場有效吸納的勞動力群體。</div></li>
+          <li><div class="bullet-dot"></div><div>AI 可能造成新的階級不平等——高教育、高技能的知識工作者面臨失業風險。</div></li>
+          <li><div class="bullet-dot"></div><div>這是與過去技術革命截然不同的衝擊：過去是低技能者先受衝擊，此次是中高技能的認知勞動者。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 11. 對社會的衝擊（2） -->
+    <div class="slide slide-content" data-slide="11">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">⚖️</div>對社會的衝擊（二）：功績主義的崩解</div>
+        <p class="body-text">AI 所造成的失業不只是收入減少，更可能貶低個人價值。</p>
+        <div class="highlight-box yellow">
+          功績主義下，社會普遍相信：努力、教育與能力應該帶來回報。
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>AI 可能破壞這種邏輯：高教育、高技能者反而失業，部分體力勞動者卻仍有穩定收入。</div></li>
+          <li><div class="bullet-dot"></div><div>這不只是經濟問題，更是社會認同與個人尊嚴的危機。</div></li>
+          <li><div class="bullet-dot"></div><div>功績主義期待落空，可能產生大規模的社會挫折感與政治怨恨情緒。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 12. AI 倫理與政策責任 -->
+    <div class="slide slide-content" data-slide="12">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🔑</div>AI 倫理與政策責任</div>
+        <div class="highlight-box green">
+          AI 被採納的「必要條件」：擁有 AI 的社會，至少不能比沒有 AI 的社會更差。
+        </div>
+        <p class="body-text">若缺乏政策介入，任由科技取代勞動力發生，卻未提供相應的社會保障，AI 便可能導致：</p>
+        <div class="stat-row">
+          <div class="stat-card"><div class="num" style="font-size:1.1rem;">大規模失業</div><div class="lbl">結構性就業破壞</div></div>
+          <div class="stat-card"><div class="num" style="font-size:1.1rem;">不平等擴大</div><div class="lbl">財富與機會分配失衡</div></div>
+          <div class="stat-card"><div class="num" style="font-size:1.1rem;">幸福感下降</div><div class="lbl">個人主觀幸福感大幅降低</div></div>
+        </div>
+        <div class="highlight-box">
+          AI 的正當性不應僅建立於其技術能力之上，更取決於它是否能改善（或至少不惡化）社會狀況。
+        </div>
+      </div>
+    </div>
+
+    <!-- 13. Section: 國家層面的勞動政策 -->
+    <div class="slide slide-section" data-slide="13">
+      <div class="slide-inner">
+        <div class="sec-num">PART 03</div>
+        <h2>國家層面的<br>勞動政策</h2>
+      </div>
+    </div>
+
+    <!-- 14. 勞動政策原則（1） -->
+    <div class="slide slide-content" data-slide="14">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🏛️</div>勞動政策原則（一）：再分配</div>
+        <div class="highlight-box">
+          針對「新勞動階級」形成的「再分配（redistribution）」
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>社會穩定取決於「必要條件」：是否能讓人感覺「至少不比以前差」。</div></li>
+          <li><div class="bullet-dot"></div><div>政策需要考慮的問題，不是 AI 是否帶來利益（或如何帶來利益），而在於——</div></li>
+        </ul>
+        <div class="highlight-box yellow">
+          制度是否能適當地重新分配 AI 所帶來的利益？
+        </div>
+      </div>
+    </div>
+
+    <!-- 15. 勞動政策原則（2） -->
+    <div class="slide slide-content" data-slide="15">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">📋</div>勞動政策原則（二）：三大回應方向</div>
+        <p class="body-text">政策需要回應三點：</p>
+        <div class="stat-row">
+          <div class="stat-card"><div class="num">①</div><div class="lbl">補償被取代群體<br>（無效勞動力、<br>心智勞動力）</div></div>
+          <div class="stat-card"><div class="num">②</div><div class="lbl">穩定社會<br>防止不平等<br>進一步擴大</div></div>
+          <div class="stat-card"><div class="num">③</div><div class="lbl">滿足<br>「必要條件」<br>不比以前差</div></div>
+        </div>
+        <p class="body-text" style="margin-top:12px;">政策應涵蓋：</p>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>物質困境、失業問題、生心理健康，甚至是過往功績主義期待所產生的挫折與怨恨。</div></li>
+          <li><div class="bullet-dot"></div><div>具體措施如：就業補貼、以再分配為導向的福利機制（稅收制度、公共支出政策的制定）。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 16. Section: 全球治理的勞動政策 -->
+    <div class="slide slide-section" data-slide="16">
+      <div class="slide-inner">
+        <div class="sec-num">PART 04</div>
+        <h2>全球治理的<br>勞動政策</h2>
+      </div>
+    </div>
+
+    <!-- 17. AI 全球治理中的核心分歧 -->
+    <div class="slide slide-content" data-slide="17">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🌍</div>AI 全球治理中的核心分歧</div>
+        <p class="body-text">目前公共治理倡議主要有兩條路徑：</p>
+        <div class="two-col">
+          <div class="col-card pro">
+            <h4>強制性路徑</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>建立具有約束力的社會保障與勞動保護</div></li>
+              <li><div class="sub-dot"></div><div>強制執行再分配義務</div></li>
+              <li><div class="sub-dot"></div><div>國際法律拘束力</div></li>
+            </ul>
+          </div>
+          <div class="col-card con">
+            <h4>自願性路徑</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>自願性、不強制的規範指引</div></li>
+              <li><div class="sub-dot"></div><div>倫理原則宣示</div></li>
+              <li><div class="sub-dot"></div><div>軟性治理框架</div></li>
+            </ul>
+          </div>
+        </div>
+        <div class="highlight-box warn">
+          兩條路徑在實踐效果上存在根本性差異，而全球治理目前明顯偏向後者。
+        </div>
+      </div>
+    </div>
+
+    <!-- 18. 為何強制勞動保障失敗 -->
+    <div class="slide slide-content" data-slide="18">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">❌</div>為何強制勞動保障失敗？</div>
+        <p class="body-text">以 International Labour Organization（ILO, 2019）為例：</p>
+        <div class="highlight-box warn">
+          因各方對「應提供多少社會保障」無法達成共識而破裂。
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>雇主、市場導向行動者認為：AI 是經濟機會，不應以過多社會保障限制創新與市場彈性。</div></li>
+          <li><div class="bullet-dot"></div><div>國家之間對「強制性社會保障義務」的範圍缺乏共識。</div></li>
+          <li><div class="bullet-dot"></div><div>強制性框架在面對多元利益行動者時，難以形成足夠的政治支持。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 19. 為何軟治理更容易成功 -->
+    <div class="slide slide-content" data-slide="19">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">✅</div>為何「軟治理」更容易成功？</div>
+        <p class="body-text">以 OECD（2019）的「以人為本（human-centric）」治理為例：</p>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>OECD AI 原則強調：非歧視、隱私與資料保護、社會正義、勞動權利。</div></li>
+          <li><div class="bullet-dot"></div><div>但其強調倫理與原則，而非真正具有約束力的再分配制度。</div></li>
+        </ul>
+        <p class="body-text">各國較容易接受抽象倫理原則，但較難接受：</p>
+        <div class="two-col">
+          <div class="col-card con">
+            <h4>難以接受</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>全球性的財富再分配</div></li>
+              <li><div class="sub-dot"></div><div>強制性的勞動保障義務</div></li>
+            </ul>
+          </div>
+          <div class="col-card pro">
+            <h4>較易接受</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>抽象的倫理聲明</div></li>
+              <li><div class="sub-dot"></div><div>自願性原則承諾</div></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 20. Local vs. Global (國家層面) -->
+    <div class="slide slide-content" data-slide="20">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🏙️</div>Local vs. Global？— 國家層面</div>
+        <div class="highlight-box green">
+          國家層面具備較強的制度執行能力
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>較有能力建立社會保障制度。</div></li>
+          <li><div class="bullet-dot"></div><div>能直接推動再分配政策，回應國內勞動市場衝擊。</div></li>
+        </ul>
+        <div class="highlight-box warn" style="margin-top:16px;">
+          然而其主要擔憂：<strong>過度監管可能削弱經濟競爭力</strong>，使資本與企業外流至監管較鬆的國家。
+        </div>
+      </div>
+    </div>
+
+    <!-- 21. Local vs. Global (全球層面) -->
+    <div class="slide slide-content" data-slide="21">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🌐</div>Local vs. Global？— 全球層面</div>
+        <div class="highlight-box">
+          國際合作框架主要建基於「倫理共識」與「原則性規範」
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>提供跨國協調框架，避免「監管競次（race to the bottom）」。</div></li>
+          <li><div class="bullet-dot"></div><div>有助於形成全球共識，為各國政策提供方向指引。</div></li>
+        </ul>
+        <div class="highlight-box warn" style="margin-top:16px;">
+          然而，全球層面的根本限制：
+          <ul style="margin-top:8px; padding-left:16px; list-style:disc; color:#f09090;">
+            <li>缺乏強制性執行力</li>
+            <li>缺乏真正的再分配能力</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 22. 治理與監管挑戰的困境 -->
+    <div class="slide slide-content" data-slide="22">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🔀</div>治理與監管挑戰的困境</div>
+        <div class="highlight-box warn">
+          AI 治理仍充滿不確定性，現有討論常聚焦於國家層級監管，而忽略全球治理動態。
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>AI 政策與治理需要全球性保障機制。</div></li>
+          <li><div class="bullet-dot"></div><div>然而，當全球政策只能歸納成抽象倫理原則，便難以從全球角度討論 AI 所帶來的實際勞動與社會風險。</div></li>
+          <li><div class="bullet-dot"></div><div>這形成一個根本性困境：<br>需要全球合作的問題 ↔ 只有國家層面才有執行力的制度安排。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 23. Section: 總結 -->
+    <div class="slide slide-section" data-slide="23">
+      <div class="slide-inner">
+        <div class="sec-num">CONCLUSION</div>
+        <h2>總結</h2>
+      </div>
+    </div>
+
+    <!-- 24. AI 對勞動市場的風險（總結） -->
+    <div class="slide slide-content" data-slide="24">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">🔍</div>AI 對勞動市場的風險（總結）</div>
+        <div class="highlight-box">
+          AI 對勞動市場帶來的是結構性的重整，不再只是輔助人類工作，而可能直接取代人類勞動力。
+        </div>
+        <ul class="bullet-list">
+          <li><div class="bullet-dot"></div><div>可見的未來將出現「無效勞動力」群體——技能已無法被市場吸納的心智勞動者。</div></li>
+          <li><div class="bullet-dot"></div><div>AI 不再只是科技或經濟效率問題，而是涉及——
+            <div class="sub-list">
+              <li><div class="sub-dot"></div><div>勞動治理</div></li>
+              <li><div class="sub-dot"></div><div>社會穩定</div></li>
+              <li><div class="sub-dot"></div><div>資源再分配</div></li>
+            </div>
+          ——的政治與社會問題。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 25. 國家與全球政策的兩難（總結） -->
+    <div class="slide slide-content" data-slide="25">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">⚖️</div>國家與全球政策的兩難（總結）</div>
+        <div class="two-col">
+          <div class="col-card pro">
+            <h4>🏛️ 國家層面政策</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>具備較強制度執行能力</div></li>
+              <li><div class="sub-dot"></div><div>能直接推動再分配與勞動保障</div></li>
+              <li><div class="sub-dot"></div><div style="color:var(--accent);">面對全球競爭壓力</div></li>
+              <li><div class="sub-dot"></div><div style="color:var(--accent);">難以完全採納 OECD 等國際機構的藍圖</div></li>
+            </ul>
+          </div>
+          <div class="col-card con">
+            <h4>🌐 全球層面治理</h4>
+            <ul>
+              <li><div class="sub-dot"></div><div>較重視倫理規範與國際協調</div></li>
+              <li><div class="sub-dot"></div><div>重視軟性治理</div></li>
+              <li><div class="sub-dot"></div><div style="color:var(--accent);">缺乏強制執行力</div></li>
+              <li><div class="sub-dot"></div><div style="color:var(--accent);">難以建立全球性勞動保障與再分配制度</div></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 26. Section: 參考資料 -->
+    <div class="slide slide-section" data-slide="26">
+      <div class="slide-inner">
+        <div class="sec-num">REFERENCES</div>
+        <h2>參考資料</h2>
+      </div>
+    </div>
+
+    <!-- 27. References -->
+    <div class="slide slide-content" data-slide="27">
+      <div class="slide-inner">
+        <div class="slide-title"><div class="title-icon">📚</div>參考文獻</div>
+        <ul class="ref-list">
+          <li>Buccella, A. (2022). "AI for all" is a matter of social justice. <em>AI Ethics, 3</em>(4), 1143–1152. <a href="https://doi.org/10.1007/s43681-022-00222-z">https://doi.org/10.1007/s43681-022-00222-z</a></li>
+          <li>Demirci, O., Hannane, J., &amp; Zhu, X. (2025). Who is AI replacing? The impact of generative AI on online freelancing platforms. <em>Management Science, 70</em>(1), 1–12. <a href="https://doi.org/10.1287/mnsc.2024.05420">https://doi.org/10.1287/mnsc.2024.05420</a></li>
+          <li>Harel, Y. (2026). AI, mental and physical labor, and a just policy framework. <em>AI &amp; SOCIETY, 41</em>, 441–454. <a href="https://doi.org/10.1007/s00146-025-02490-9">https://doi.org/10.1007/s00146-025-02490-9</a></li>
+          <li>OECD. (2023). <em>OECD Employment Outlook 2023: Artificial Intelligence and the Labour Market.</em> <a href="https://doi.org/10.1787/08785bba-en">https://doi.org/10.1787/08785bba-en</a></li>
+          <li>Strietska-Ilina, O., &amp; Chun, H.-K. (2021). <em>Changing Demand for Skills in Digital Economies and Societies.</em> International Labour Organization. <a href="https://www.ilo.org/publications/changing-demand-skills-digital-economies-and-societies-literature-review">ILO Link</a></li>
+          <li>World Economic Forum. (2025). <em>Four Futures for Jobs in the New Economy: AI and Talent in 2030.</em> <a href="https://reports.weforum.org">reports.weforum.org</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /slides -->
+
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progress"></div>
+</div><!-- /stage -->
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← 上一張</button>
+  <div class="dot-nav" id="dotNav"></div>
+  <button class="nav-btn" id="nextBtn" onclick="navigate(1)">下一張 →</button>
+</div>
+<div class="kbd-hint">← → 方向鍵或空白鍵換頁</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  document.getElementById('tot').textContent = total;
+
+  // Build dots
+  const dotNav = document.getElementById('dotNav');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotNav.appendChild(d);
+  });
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= total) return;
+    slides[current].classList.remove('active');
+    slides[current].classList.add('exit');
+    setTimeout(() => slides[current < idx ? current : idx].classList.remove('exit'), 400);
+    current = idx;
+    slides[current].classList.add('active');
+    slides[current].classList.remove('exit');
+    update();
+  }
+
+  function navigate(dir) { goTo(current + dir); }
+
+  function update() {
+    document.getElementById('cur').textContent = current + 1;
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === total - 1;
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); navigate(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); navigate(-1); }
+  });
+
+  update();
+</script>
+</body>
+</html>
